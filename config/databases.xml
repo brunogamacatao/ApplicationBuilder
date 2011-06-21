@@ -1,0 +1,22 @@
+<databases>
+	<database name="Select One" order="0">
+		<driver/>
+		<url/>
+		<driverPath/>
+	</database>
+	<database name="MySQL" order="1">
+		<driver>com.mysql.jdbc.Driver</driver>
+		<url><![CDATA[jdbc:mysql://<hostname>/<alias>]]></url>
+		<driverPath>lib/jdbcDrivers/mysql-connector-java-5.1.5-bin.jar</driverPath>
+	</database>
+	<database name="Oracle 10g XE" order="2">
+		<driver>oracle.jdbc.OracleDriver</driver>
+		<url><![CDATA[jdbc:oracle:thin:[user/password]@[host][:port]:SID]]></url>
+		<driverPath>lib/jdbcDrivers/ojdbc14.jar</driverPath>
+	</database>
+	<database name="Java DB (Derby)" order="3">
+		<driver>org.apache.derby.jdbc.EmbeddedDriver</driver>
+		<url><![CDATA[jdbc:derby:[Database]]]></url>
+		<driverPath>lib/jdbcDrivers/derby.jar</driverPath>
+	</database>
+</databases>

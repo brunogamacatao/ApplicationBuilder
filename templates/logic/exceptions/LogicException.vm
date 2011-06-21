@@ -1,0 +1,35 @@
+## This is the template for the generic exception type for all data operations.
+package $package;
+
+/**
+#if ($application.getDescription())
+ * $application.getDescription()
+ *
+#end
+ * This class implements a generic exception type for all data operations within
+ * the scope of this application.
+ *
+#if ($application.getAuthor())
+ * @author $application.getAuthor()
+#end
+ */
+public class LogicException extends Exception {
+    private Object[] arguments;
+    
+    public LogicException(String message) {
+        this(message, (Object[])null);
+    }
+    
+    public LogicException(String message, Object... arguments) {
+        super(message);
+        this.arguments = arguments;
+    }
+
+    public LogicException(Throwable cause) {
+        super(cause);
+    }
+    
+    public Object[] getArguments() {
+        return arguments;
+    }
+}

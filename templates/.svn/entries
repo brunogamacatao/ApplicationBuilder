@@ -1,0 +1,77 @@
+10
+
+dir
+23
+https://appbuilder.googlecode.com/svn/trunk/ApplicationBuilder/templates
+https://appbuilder.googlecode.com/svn
+
+
+
+2008-04-02T16:28:23.584290Z
+22
+brunogamacatao
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4dd5fd39-ba42-0410-b155-25bb212b858d
+
+build.vm
+file
+
+
+
+
+2011-06-15T22:20:40.000000Z
+d57d1bf4a53b0030651c15ea97e6ea59
+2008-04-02T16:28:23.584290Z
+22
+brunogamacatao
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1852
+
+messages
+dir
+
+data
+dir
+
+presentation
+dir
+
+logic
+dir
+
+util
+dir
+

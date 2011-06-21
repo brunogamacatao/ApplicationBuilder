@@ -1,0 +1,470 @@
+## This is the template for creating JDBC DAO classes
+#macro (primaryKey $table)
+#set ($params = "")
+#foreach ($column in $table.getColumns())
+#if($column.isPrimaryKey())
+#set ($params = $params + ${column.getType().getJavaType()} + " ")
+#set ($params = $params + ${stringUtils.columnToPropertyName($column.getName())} + ", ")
+#end
+#end
+#set ($pLength = $params.length() - 2)
+#set ($params = $params.substring(0, $pLength))
+$params#end
+#macro(exPkg)$exceptionsPackage#end
+#macro(msgKey $table $column $suffix)
+${table.getName()}_${column.getName()}_$suffix#end
+package $package;
+
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.PreparedStatement;
+import java.sql.Statement;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import ${appUtilPackage}.Constants;
+import ${utilPackage}.JdbcUtil;
+import ${entitiesPackage}.${entityName};
+import #exPkg().DataException;
+import #exPkg().EmptyPropertyException;
+
+/**
+#if ($application.getDescription())
+ * $application.getDescription()
+ *
+#end
+ * This class implements all the operations needed to handle data to and from
+ * $table.getName() table in application.
+ *
+#if ($application.getAuthor())
+ * @author $application.getAuthor()
+#end
+ */
+public class ${className} {
+    private static Logger logger = Logger.getLogger(${className}.class.getName());
+
+#if ($table.getSchema())
+    private static final String TABLE_NAME = "${table.getSchema()}.${table.getName()}";
+#else
+    private static final String TABLE_NAME = "$table.getName()";
+#end
+
+#set ($paramList = "")
+#set ($varList = "")
+#foreach($column in $table.getColumns())
+#set ($paramList = $paramList + $column.getName() + ", ")
+#set ($varList = $varList + "?, ")
+#end
+#set ($pLength = $paramList.length() - 2)
+#set ($paramList = $paramList.substring(0, $pLength))
+#set ($pLength = $varList.length() - 2)
+#set ($varList = $varList.substring(0, $pLength))
+    private static final String INSERT_STATEMENT = "INSERT INTO " + TABLE_NAME + "($paramList) VALUES ($varList)";
+    private static final String SELECT_STATEMENT = "SELECT $paramList FROM " + TABLE_NAME;
+#set ($paramList = "")
+#foreach($column in $table.getColumns())
+#if($column.isPrimaryKey())
+#set ($paramList = $paramList + $column.getName() + " = ? AND ")
+#end
+#end
+#set ($pLength = $paramList.length() - 5)
+#set ($paramList = $paramList.substring(0, $pLength))
+    private static final String DELETE_STATEMENT = "DELETE FROM " + TABLE_NAME + " WHERE $paramList";
+#set ($whereClause = $paramList)
+#set ($paramList = "")
+#foreach($column in $table.getColumns())
+#if(!$column.isPrimaryKey())
+#set ($paramList = $paramList + $column.getName() + " = ?, ")
+#end
+#end
+#set ($pLength = $paramList.length() - 2)
+#set ($paramList = $paramList.substring(0, $pLength))
+    private static final String UPDATE_STATEMENT = "UPDATE " + TABLE_NAME + " SET $paramList WHERE $whereClause";
+
+    //Constants for checking column lengths    
+#foreach($column in $table.getColumns())
+#if (${column.getType().getDimensions()} == 1)
+    private static final int ${column.getName()}_LENGTH = ${column.getPrecision(0)};
+#else
+    private static final int ${column.getName()}_INTEGER_LENGTH = ${column.getPrecision(0)};
+    private static final int ${column.getName()}_DECIMAL_LENGTH = ${column.getPrecision(1)};
+#end
+#end
+
+    //This is variable holds the unique instance of this class.
+    private static ${className} instance;
+
+    /**
+     * This method must be used to obtain instances of this class, according to
+     * the singleton design pattern.
+     */
+    public static ${className} getInstance() {
+        if (instance == null) {
+            instance = new ${className}();
+        }
+
+        return instance;
+    }
+
+    /**
+     * This constructor is intentionally private. So, the unique way to obtain
+     * an instance of this class is through the getInstance method. This is 
+     * necessary to ensure the singleton design pattern.
+     */
+    private ${className}() {
+    }
+
+    /**
+     * This method is used to add new records to the $table.getName() table.
+     * @param entity An instance of the $entityName class that contains all the
+     * information necessary to add a new record to the database.
+     */
+    public void insert($entityName entity) throws DataException {
+        //Checking if the entity is valid for insertion
+#foreach($column in $table.getColumns())
+#if($column.isPrimaryKey() || !$column.isNullable())
+        if (entity.get${stringUtils.tableToClassName($column.getName())}() == null) {
+#set($messageKey = "EMPTY_PROPERTY_MSG")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "The property {0} is null")
+#end
+            throw new EmptyPropertyException(Constants.$messageKey, "${stringUtils.columnToPropertyName($column.getName())}");
+        }
+#end
+#end
+
+        //Checks if the entity has valid fields
+        checkValidity(entity);
+
+        try {
+            Connection con = JdbcUtil.getInstance().getConnection();
+            PreparedStatement pstmt = con.prepareStatement(INSERT_STATEMENT);
+
+#set ($idx = 1)
+#foreach($column in $table.getColumns())
+            pstmt.set${column.getType().getJdbcName()}($idx, entity.get${stringUtils.tableToClassName($column.getName())}());
+#set ($idx = $idx + 1)
+#end
+
+            pstmt.executeUpdate();
+        } catch (SQLException ex) {
+            logger.log(Level.SEVERE, null, ex);
+            throw new DataException(ex);
+        }
+    }
+
+    /**
+     * This method deletes a record from the $table.getName() table.
+     * @param entity An instance of the $entityName class that contains all the
+     * information necessary to perform the record removal.
+     */
+    public void delete($entityName entity) throws DataException {
+        //Checking if the entity is valid for delete
+#foreach($column in $table.getColumns())
+#if($column.isPrimaryKey())
+        if (entity.get${stringUtils.tableToClassName($column.getName())}() == null) {
+#set($messageKey = "EMPTY_PROPERTY_MSG")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "The property {0} is null")
+#end
+            throw new EmptyPropertyException(Constants.$messageKey, "${stringUtils.columnToPropertyName($column.getName())}");
+        }
+#end
+#end
+
+        try {
+            Connection con = JdbcUtil.getInstance().getConnection();
+            PreparedStatement pstmt = con.prepareStatement(DELETE_STATEMENT);
+
+#set ($idx = 1)
+#foreach($column in $table.getColumns())
+#if ($column.isPrimaryKey())
+            pstmt.set${column.getType().getJdbcName()}($idx, entity.get${stringUtils.tableToClassName($column.getName())}());
+#set ($idx = $idx + 1)
+#end
+#end
+
+            pstmt.executeUpdate();
+        } catch (SQLException ex) {
+            logger.log(Level.SEVERE, null, ex);
+            throw new DataException(ex);
+        }
+    }
+
+    /**
+     * This method updates a record within the $table.getName() table.
+     * @param entity An instance of the $entityName class that contains all the
+     * information necessary to update the desired record.
+     */
+    public void update($entityName entity) throws DataException {
+        //Checking if the entity is valid for update
+#foreach($column in $table.getColumns())
+#if($column.isPrimaryKey() || !$column.isNullable())
+        if (entity.get${stringUtils.tableToClassName($column.getName())}() == null) {
+#set($messageKey = "EMPTY_PROPERTY_MSG")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "The property {0} is null")
+#end
+            throw new EmptyPropertyException(Constants.$messageKey, "${stringUtils.columnToPropertyName($column.getName())}");
+        }
+#end
+#end
+
+        //Checks if the entity has valid fields
+        checkValidity(entity);
+
+        try {
+            Connection con = JdbcUtil.getInstance().getConnection();
+            PreparedStatement pstmt = con.prepareStatement(UPDATE_STATEMENT);
+
+#set ($idx = 1)
+#foreach($column in $table.getColumns())
+#if (!$column.isPrimaryKey())
+            pstmt.set${column.getType().getJdbcName()}($idx, entity.get${stringUtils.tableToClassName($column.getName())}());
+#set ($idx = $idx + 1)
+#end
+#end
+#foreach($column in $table.getColumns())
+#if ($column.isPrimaryKey())
+            pstmt.set${column.getType().getJdbcName()}($idx, entity.get${stringUtils.tableToClassName($column.getName())}());
+#set ($idx = $idx + 1)
+#end
+#end
+
+            pstmt.executeUpdate();
+        } catch (SQLException ex) {
+            logger.log(Level.SEVERE, null, ex);
+            throw new DataException(ex);
+        }
+    }
+
+    /**
+     * This method returns an unique instance of the $entityName class, with
+     * its properties values filled with data returned from a record from 
+     * $table.getName() which satisfies the given primary key.
+     */
+    public $entityName findByPrimaryKey(#primaryKey($table)) throws DataException {
+        //Checking if the parameters are valid
+#foreach($column in $table.getColumns())
+#if($column.isPrimaryKey())
+        if (${stringUtils.columnToPropertyName($column.getName())} == null) {
+#set($messageKey = "EMPTY_PROPERTY_MSG")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "The property {0} is null")
+#end
+            throw new EmptyPropertyException(Constants.$messageKey, "${stringUtils.columnToPropertyName($column.getName())}");
+        }
+#end
+#end
+
+        $entityName entity = null;
+        StringBuilder query = new StringBuilder(SELECT_STATEMENT);
+
+        query.append(" WHERE ");
+#set ($paramList = "")
+#foreach($column in $table.getColumns())
+#if($column.isPrimaryKey())
+#set ($paramList = $paramList + $column.getName() + " = ? AND ")
+#end
+#end
+#set ($pLength = $paramList.length() - 5)
+#set ($paramList = $paramList.substring(0, $pLength))
+        query.append("$paramList");
+
+        try {
+            Connection con = JdbcUtil.getInstance().getConnection();
+            PreparedStatement pstmt = con.prepareStatement(query.toString());
+
+#set ($idx = 1)
+#foreach($column in $table.getColumns())
+#if ($column.isPrimaryKey())
+            pstmt.set${column.getType().getJdbcName()}($idx, entity.get${stringUtils.tableToClassName($column.getName())}());
+#set ($idx = $idx + 1)
+#end
+#end
+
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                entity = loadEntity(rs);
+            }
+        } catch (SQLException ex) {
+            logger.log(Level.SEVERE, null, ex);
+            throw new DataException(ex);
+        }
+
+        return entity;
+    }
+
+    /**
+     * This method performs a query for all the records of the $table.getName()
+     * table.
+     * @return A collection containing all the records of the $table.getName()
+     * table.
+     */
+    public Collection<$entityName> findAll() throws DataException {
+        Collection<$entityName> result = createCollection();
+
+        try {
+            Connection con = JdbcUtil.getInstance().getConnection();
+            Statement stmt = con.createStatement();
+
+            ResultSet rs = stmt.executeQuery(SELECT_STATEMENT);
+
+            while (rs.next()) {
+                result.add(loadEntity(rs));
+            }
+        } catch (SQLException ex) {
+            logger.log(Level.SEVERE, null, ex);
+            throw new DataException(ex);
+        }
+
+        return result;
+    }
+
+    /**
+     * This method performs a database query based on the values contained at
+     * the example object. This object is used to build dynamically the SQL
+     * query string.
+     * @param example The example object.
+     * @param A collection containing the query result.
+     */
+    public Collection<$entityName> findByExample($entityName example) throws DataException {
+        Collection<$entityName> result = createCollection();
+        StringBuilder whereClause = new StringBuilder();
+
+        try {
+            Connection con = JdbcUtil.getInstance().getConnection();
+
+#foreach($column in $table.getColumns())
+            if (example.get${stringUtils.tableToClassName($column.getName())}() != null) {
+                if (whereClause.length() > 0) {
+                    whereClause.append(" AND ");
+                } else {
+                    whereClause.append(" WHERE ");
+                }
+
+                whereClause.append("$column.getName() = ?");
+            }
+#end
+
+            PreparedStatement pstmt = con.prepareStatement(SELECT_STATEMENT + whereClause.toString());
+            ResultSet rs = pstmt.executeQuery();
+
+            int idx = 1;
+
+#foreach($column in $table.getColumns())
+            if (example.get${stringUtils.tableToClassName($column.getName())}() != null) {
+                pstmt.set${column.getType().getJdbcName()}(idx++, example.get${stringUtils.tableToClassName($column.getName())}());
+            }
+#end
+
+            while (rs.next()) {
+                result.add(loadEntity(rs));
+            }
+        } catch (SQLException ex) {
+            logger.log(Level.SEVERE, null, ex);
+            throw new DataException(ex);
+        }
+
+        return result;
+    }
+
+    /**
+     * This method creates a new instance of the $entityName class and then
+     * initializes its properties with the values contained in the current 
+     * cursor position of the given result set object.
+     * @param rs A result set object containing the information necessary to 
+     * build a new $entityName instance.
+     * @return A new $entityName instance.
+     */
+    private $entityName loadEntity(ResultSet rs) throws SQLException {
+#set ($params = "")
+#foreach($column in $table.getColumns())
+#if ($column.isPrimaryKey())
+        ${column.getType().getJavaType()} ${stringUtils.columnToPropertyName($column.getName())} = rs.get${column.getType().getJdbcName()}("$column.getName()");
+#set ($params = $params + ${stringUtils.columnToPropertyName($column.getName())} + ", ")
+#end
+#end
+#set ($pLength = $params.length() - 2)
+#set ($params = $params.substring(0, $pLength))
+
+        $entityName entity = new $entityName($params);
+
+#set ($idx = 1)
+#foreach($column in $table.getColumns())
+#if (!$column.isPrimaryKey())
+        entity.set${stringUtils.tableToClassName($column.getName())}(rs.get${column.getType().getJdbcName()}("$column.getName()"));
+#set ($idx = $idx + 1)
+#end
+#end
+
+        return entity;
+    }
+    
+    /**
+     * This method checks if an entity is valid for insertion or update 
+     * operations. It basically checks if the size of data stored in 
+     * entity properties is compatible with the respective table columns.
+     * @param entity The entity that will be evaluated.
+     * @throws DataException This will be thrown if any entity field contains
+     * incompatible data regarding to its correspondent table/column in 
+     * database.
+     */
+    private void checkValidity($entityName entity) throws DataException {
+#set ($idx = 0)
+#foreach($column in $table.getColumns())
+#if (!$column.isPrimaryKey())
+#if ($idx > 0)
+
+#end
+        ${column.getType().getJavaType()} ${stringUtils.columnToPropertyName($column.getName())} = entity.get${stringUtils.tableToClassName($column.getName())}();
+        
+        if (${stringUtils.columnToPropertyName($column.getName())} != null) {
+            //If the property is not null, it will check if is length is acceptable
+#if (${column.getType().getDimensions()} == 1)
+            int length = ${stringUtils.columnToPropertyName($column.getName())}.toString().length();
+            if (length > ${column.getName()}_LENGTH) {
+#set($messageKey = "PROPERTY_LENGTH_EXCEEDED_MSG")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "The length of {0} property from {1} exceeds the maximum length of {2}")
+#end
+                throw new DataException(Constants.$messageKey, "${stringUtils.columnToPropertyName($column.getName())}", "$entityName", new Integer(${column.getPrecision(0)}));
+            }
+#else
+            String strValue = ${stringUtils.columnToPropertyName($column.getName())}.toString();
+            
+            int intLength = (strValue.indexOf(".") > 0) ? intLength = strValue.substring(0, strValue.indexOf(".")).length() : 0;
+            int decLength = (strValue.indexOf(".") > 0) ? decLength = strValue.substring(strValue.indexOf(".") + 1).length() : 0;
+            
+            if (intLength > ${column.getName()}_INTEGER_LENGTH) {
+#set($messageKey = "PROPERTY_INTEGER_LENGTH_EXCEEDED_MSG")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "The length of integer portion of {0} property from {1} exceeds the maximum length of {2}")
+#end
+                throw new DataException(Constants.$messageKey, "${stringUtils.columnToPropertyName($column.getName())}", "$entityName", new Integer(${column.getPrecision(0)}));
+            }
+            
+            if (decLength > ${column.getName()}_DECIMAL_LENGTH) {
+#set($messageKey = "PROPERTY_DECIMAL_LENGTH_EXCEEDED_MSG")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "The length of decimal portion of {0} property from {1} exceeds the maximum length of {2}")
+#end
+                throw new DataException(Constants.$messageKey, "${stringUtils.columnToPropertyName($column.getName())}", "$entityName", new Integer(${column.getPrecision(1)}));
+            }
+#end
+        }
+#set ($idx = $idx + 1) 
+#end
+#end    
+    }
+
+    /**
+     * Factory method designed to return instances of Collection class.
+     */
+    private <T> Collection<T> createCollection() {
+        return new ArrayList<T>();
+    }
+}

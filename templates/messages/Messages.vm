@@ -1,0 +1,4 @@
+#This holds all the application's strings for internationalization purposes
+#foreach ($key in ${application.getMessageKeys()})
+$key = $application.getMessage($key) 
+#end

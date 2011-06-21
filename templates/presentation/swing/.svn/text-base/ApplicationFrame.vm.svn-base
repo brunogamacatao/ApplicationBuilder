@@ -1,0 +1,243 @@
+## This is the template for creating the Swing main application frame class
+package $package;
+
+import java.awt.BorderLayout;
+import java.awt.FlowLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.BorderFactory;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.SwingUtilities;
+import ${package}.util.MDIDesktopPane;
+import ${package}.util.WindowMenu;
+import ${packageUtil}.Constants;
+import ${packageUtil}.MessageUtil;
+
+/**
+#if ($application.getDescription())
+ * $application.getDescription()
+ *
+#end
+ * This class implements the starting point of the application, implemented as a
+ * swing JFrame.
+ *
+#if ($application.getAuthor())
+ * @author $application.getAuthor()
+#end
+ */
+public class ${className} extends JFrame implements ActionListener {
+    public static final int DEFAULT_WIDTH  = 800;
+    public static final int DEFAULT_HEIGHT = 600;
+
+    private static Logger logger = Logger.getLogger(${className}.class.getName());
+
+    private MDIDesktopPane desktopPane;
+    private JLabel status;
+
+    public ${className}() {
+#set($messageKey = "APPLICATION_FRAME_TITLE")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, ${application.getName()})
+#end
+        super(MessageUtil.getMessage(Constants.$messageKey));
+
+        initComponents();
+        setupMenu();
+        setupLayout();
+
+        this.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                exit();
+            }
+        });
+        
+        this.setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+    }
+
+    protected void initComponents() {
+        desktopPane = new MDIDesktopPane();
+#set($messageKey = "APPLICATION_FRAME_STATUS")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "Status")
+#end
+        status = new JLabel(MessageUtil.getMessage(Constants.$messageKey));
+    }
+    
+    protected void setupMenu() {
+        JMenuBar menuBar = new JMenuBar();
+        
+#set($messageKey = "APPLICATION_FRAME_MENU_FILE")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "File")
+#end
+        JMenu file = new JMenu(MessageUtil.getMessage(Constants.$messageKey));
+#set($messageKey = "APPLICATION_FRAME_MENU_MANTAIN")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "Mantain")
+#end
+        JMenu mantain = new JMenu(MessageUtil.getMessage(Constants.$messageKey));
+#set($messageKey = "APPLICATION_FRAME_MENU_HELP")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "Help")
+#end
+        JMenu help = new JMenu(MessageUtil.getMessage(Constants.$messageKey));
+        
+#set($messageKey = "APPLICATION_FRAME_MENU_FILE_EXIT")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "Exit")
+#end
+#set($messageKeyDesc = "APPLICATION_FRAME_MENU_FILE_EXIT_DESCRIPTION")
+#if(!$application.containsMessage($messageKeyDesc))
+$application.addMessage($messageKeyDesc, "Leave the application")
+#end
+        file.add(createMenuItem(MessageUtil.getMessage(Constants.$messageKey), MessageUtil.getMessage(Constants.$messageKeyDesc), "exit"));
+
+#foreach($table in ${application.getDataSource().getTables()})
+        mantain.add(createMenuItem("${table.getName()}", "Mantain table ${table.getName()}", "mantain${stringUtils.tableToClassName($table.getName())}"));
+#end
+#set($messageKey = "APPLICATION_FRAME_MENU_HELP_ABOUT")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "Help")
+#end
+#set($messageKeyDesc = "APPLICATION_FRAME_MENU_HELP_ABOUT_DESCRIPTION")
+#if(!$application.containsMessage($messageKeyDesc))
+$application.addMessage($messageKeyDesc, "About the application")
+#end
+        help.add(createMenuItem(MessageUtil.getMessage(Constants.$messageKey), MessageUtil.getMessage(Constants.$messageKeyDesc), "about"));
+        
+        menuBar.add(file);
+        menuBar.add(mantain);
+        menuBar.add(new WindowMenu(desktopPane));
+        menuBar.add(help);
+        
+        this.setJMenuBar(menuBar);
+    }
+
+    protected void setupLayout() {
+        JPanel statusBar = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        statusBar.add(status);
+        statusBar.setBorder(BorderFactory.createLoweredBevelBorder());
+        
+        JPanel mainPane = new JPanel(new BorderLayout());
+        
+        mainPane.add(BorderLayout.CENTER, new JScrollPane(desktopPane));
+        mainPane.add(BorderLayout.SOUTH, statusBar);
+        
+        this.setContentPane(mainPane);
+    }
+    
+    //Begin of the action handling methods
+    public void about() {
+#set($messageKey = "APPLICATION_FRAME_ABOUT_DIALOG_MESSAGE")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, ${application.getDescription()})
+#end
+#set($messageKeyTitle = "APPLICATION_FRAME_ABOUT_DIALOG_TITLE")
+#if(!$application.containsMessage($messageKeyTitle))
+$application.addMessage($messageKeyTitle, $application.getName())
+#end
+        JOptionPane.showMessageDialog(this, MessageUtil.getMessage(Constants.$messageKey), MessageUtil.getMessage(Constants.$messageKeyTitle), JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    public void exit() {
+#set($messageKey = "APPLICATION_FRAME_EXIT_MSG")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "Do you really want to leave the application ?")
+#end
+#set($messageKeyTitle = "APPLICATION_FRAME_EXIT_TITLE")
+#if(!$application.containsMessage($messageKeyTitle))
+$application.addMessage($messageKeyTitle, $application.getName())
+#end
+        if (JOptionPane.showConfirmDialog(this, 
+                MessageUtil.getMessage(Constants.$messageKey), 
+                MessageUtil.getMessage(Constants.$messageKeyTitle), 
+                JOptionPane.YES_NO_OPTION) ==
+                JOptionPane.OK_OPTION) {
+            System.exit(0);
+        }
+    }
+    
+    public void setStatus(String message) {
+#set($messageKey = "APPLICATION_FRAME_STATUS")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "Status")
+#end
+        status.setText(MessageUtil.getMessage(Constants.$messageKey) + ": " + message);
+    }
+    
+    public void resetStatus() {
+#set($messageKey = "APPLICATION_FRAME_STATUS")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "Status")
+#end
+        status.setText(MessageUtil.getMessage(Constants.$messageKey));
+    }
+    //End of the action handling methods
+    
+    //Main event handling method
+    public void actionPerformed(ActionEvent ae) {
+        if (ae.getActionCommand().equals("about")) {
+            about();
+        } else if (ae.getActionCommand().equals("exit")) {
+            exit();
+        }#foreach($table in ${application.getDataSource().getTables()}) else if (ae.getActionCommand().equals("mantain${stringUtils.tableToClassName($table.getName())}")) {
+            ${stringUtils.tableToClassName($table.getName())}IFrame iframe = new ${stringUtils.tableToClassName($table.getName())}IFrame();
+            iframe.pack();
+            desktopPane.add(iframe);
+            iframe.setVisible(true);
+        }#end
+
+    }
+    
+    //Begin of the factory methods
+    protected JMenuItem createMenuItem(String label, String statusMsg, String command) {
+        JMenuItem item = new JMenuItem(label);
+        
+        item.setActionCommand(command);
+        item.addActionListener(this);
+        item.addMouseListener(createStatusMouseListener(statusMsg));
+        
+        return item;
+    }
+    
+    protected MouseListener createStatusMouseListener(final String statusMsg) {
+        return new MouseAdapter(){
+            @Override
+            public void mouseEntered(MouseEvent me) {
+                setStatus(statusMsg);
+            }
+            
+            @Override
+            public void mouseExited(MouseEvent me) {
+                resetStatus();
+            }
+        };
+    }
+    //End of the factory methods
+    
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                ${className} frame = new ${className}();
+                frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+                frame.setLocationRelativeTo(null);
+                frame.setVisible(true);
+            }
+        });
+    }
+}

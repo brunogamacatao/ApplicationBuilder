@@ -1,0 +1,129 @@
+## This is the template for creating the utility class MDIDesktopPane
+package ${package}.util;
+
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.beans.PropertyVetoException;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JInternalFrame;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
+import javax.swing.event.MenuEvent;
+import javax.swing.event.MenuListener;
+import ${packageUtil}.Constants;
+import ${packageUtil}.MessageUtil;
+
+/**
+ * Menu component that handles the functionality expected of a standard
+ * "Windows" menu for MDI applications.
+ * 
+ * @see http://www.javaworld.com/javaworld/jw-05-2001/jw-0525-mdi.html
+ */
+public class WindowMenu extends JMenu {
+    private MDIDesktopPane desktop;
+    private JMenuItem cascade;
+    private JMenuItem tile;
+
+    public WindowMenu(MDIDesktopPane desktop) {
+        this.desktop = desktop;
+#set($messageKey = "APPLICATION_WINDOW_MENU_LABEL")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "Window")
+#end
+        this.setText(MessageUtil.getMessage(Constants.$messageKey));
+
+#set($messageKey = "APPLICATION_WINDOW_MENU_CASCADE_LABEL")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "Cascade")
+#end
+        cascade = new JMenuItem(MessageUtil.getMessage(Constants.$messageKey));
+#set($messageKey = "APPLICATION_WINDOW_MENU_TILE_LABEL")
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, "Tile")
+#end
+        tile = new JMenuItem(MessageUtil.getMessage(Constants.$messageKey));
+
+        cascade.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent ae) {
+                WindowMenu.this.desktop.cascadeFrames();
+            }
+        });
+
+        tile.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent ae) {
+                WindowMenu.this.desktop.tileFrames();
+            }
+        });
+
+        this.addMenuListener(new MenuListener() {
+            public void menuCanceled(MenuEvent e) {
+                //Do nothing
+            }
+
+            public void menuDeselected(MenuEvent e) {
+                removeAll();
+            }
+
+            public void menuSelected(MenuEvent e) {
+                buildChildMenus();
+            }
+        });
+    }
+
+    /**
+     * Sets up the children menus depending on the current desktop state.
+     */
+    private void buildChildMenus() {
+        int i;
+        ChildMenuItem menu;
+        JInternalFrame[] array = desktop.getAllFrames();
+
+        this.add(cascade);
+        this.add(tile);
+
+        if (array.length > 0) {
+            this.addSeparator();
+        }
+
+        cascade.setEnabled(array.length > 0);
+        tile.setEnabled(array.length > 0);
+
+        for (i = 0; i < array.length; i++) {
+            menu = new ChildMenuItem(array[i]);
+            menu.setState(i == 0);
+            menu.addActionListener(new ActionListener() {
+
+                public void actionPerformed(ActionEvent ae) {
+                    JInternalFrame frame = 
+                        ((ChildMenuItem) ae.getSource()).getFrame();
+                    frame.moveToFront();
+                    try {
+                        frame.setSelected(true);
+                    } catch (PropertyVetoException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+
+            menu.setIcon(array[i].getFrameIcon());
+            this.add(menu);
+        }
+    }
+
+    /** 
+     * This JCheckBoxMenuItem descendant is used to track the child frame that 
+     * corresponds to a give menu.
+     */
+    private static class ChildMenuItem extends JCheckBoxMenuItem {
+        private JInternalFrame frame;
+
+        public ChildMenuItem(JInternalFrame frame) {
+            super(frame.getTitle());
+            this.frame = frame;
+        }
+
+        public JInternalFrame getFrame() {
+            return frame;
+        }
+    }
+}

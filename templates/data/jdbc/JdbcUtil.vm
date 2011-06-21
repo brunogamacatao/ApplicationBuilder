@@ -1,0 +1,82 @@
+## This is the template for creating JDBC data classes
+package $package;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+#if ($application.getDescription())
+ * $application.getDescription()
+ *
+#end
+ * This class encapsulates utility methods to access database resources.
+ *
+#if ($application.getAuthor())
+ * @author $application.getAuthor()
+#end
+ */
+public class JdbcUtil {
+    private static Logger logger = Logger.getLogger(JdbcUtil.class.getName());
+
+    private static JdbcUtil instance;
+    private Connection con;
+
+    /**
+     * This method is used, according to the singleton design pattern, to 
+     * obtain an unique instance of this class.
+     */
+    public static JdbcUtil getInstance() {
+        if (instance == null) {
+            instance = new JdbcUtil();
+        }
+
+        return instance;
+    }
+
+    /**
+     * This constructor is intentionally hidden to ensure the singleton design
+     * pattern.
+     */
+    private JdbcUtil() {
+        con = getConnection();
+    }
+
+    /**
+     * This method should be used to obtain a database connection.
+     */
+    public Connection getConnection() {
+        try {
+            if (con == null || con.isClosed()) {
+                con = createConnection();
+            }
+        } catch (SQLException ex) {
+            logger.log(Level.SEVERE, null, ex);
+        }
+
+        return con;
+    }
+
+    /**
+     * This method is used to create a new database connection.
+     */
+    private Connection createConnection() {
+        try {
+            //Loading the driver
+            Class.forName("$driver");
+
+            //Obtaining a database connection
+#if ($user)
+            con = DriverManager.getConnection("$url", "$user", "$password");
+#else
+            con = DriverManager.getConnection("$url");
+#end
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, null, ex);
+        }
+
+        return con;
+    }
+}

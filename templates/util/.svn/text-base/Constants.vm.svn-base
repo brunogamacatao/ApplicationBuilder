@@ -1,0 +1,19 @@
+## This is the template for the Constants class
+package $package;
+
+/**
+#if ($application.getDescription())
+ * $application.getDescription()
+ *
+#end
+ * This class is intended to hold the global application constants.
+ *
+#if ($application.getAuthor())
+ * @author $application.getAuthor()
+#end
+ */
+public class Constants {
+#foreach ($key in ${application.getMessageKeys()})
+    public static final String $key = "$key"; 
+#end
+}

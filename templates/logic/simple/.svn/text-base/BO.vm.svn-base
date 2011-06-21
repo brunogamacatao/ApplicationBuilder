@@ -1,0 +1,165 @@
+## This is the template for creating Business Object (BO) classes
+#macro (primaryKey $table)
+#set ($params = "")
+#foreach ($column in $table.getColumns())
+#if($column.isPrimaryKey())
+#set ($params = $params + ${column.getType().getJavaType()} + " ")
+#set ($params = $params + ${stringUtils.columnToPropertyName($column.getName())} + ", ")
+#end
+#end
+#set ($pLength = $params.length() - 2)
+#set ($params = $params.substring(0, $pLength))
+$params#end
+#macro (primaryKeyParams $table)
+#set ($params = "")
+#foreach ($column in $table.getColumns())
+#if($column.isPrimaryKey())
+#set ($params = $params + ${stringUtils.columnToPropertyName($column.getName())} + ", ")
+#end
+#end
+#set ($pLength = $params.length() - 2)
+#set ($params = $params.substring(0, $pLength))
+$params#end
+#macro(logicExPkg)$logicExceptionsPackage#end
+package $package;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import ${entitiesPackage}.${entityName};
+import ${daoPackage}.${daoName};
+import #exPkg().DataException;
+import #logicExPkg().LogicException;
+
+/**
+#if ($application.getDescription())
+ * $application.getDescription()
+ *
+#end
+ * This class implements all the operations needed to handle data to and from
+ * $table.getName() table in application.
+ *
+#if ($application.getAuthor())
+ * @author $application.getAuthor()
+#end
+ */
+public class ${className} {
+    private static Logger logger = Logger.getLogger(${className}.class.getName());
+
+    //This is variable holds the unique instance of this class.
+    private static ${className} instance;
+
+    /**
+     * This method must be used to obtain instances of this class, according to
+     * the singleton design pattern.
+     */
+    public static ${className} getInstance() {
+        if (instance == null) {
+            instance = new ${className}();
+        }
+
+        return instance;
+    }
+
+    /**
+     * This constructor is intentionally private. So, the unique way to obtain
+     * an instance of this class is through the getInstance method. This is 
+     * necessary to ensure the singleton design pattern.
+     */
+    private ${className}() {
+    }
+
+    /**
+     * This method is used to add new records to the $table.getName() table.
+     * @param entity An instance of the $entityName class that contains all the
+     * information necessary to add a new record to the database.
+     */
+    public void insert($entityName entity) throws LogicException {
+        try {
+            ${daoName}.getInstance().insert(entity);
+        } catch (DataException ex) {
+            throw new LogicException(ex);
+        }
+    }
+
+    /**
+     * This method deletes a record from the $table.getName() table.
+     * @param entity An instance of the $entityName class that contains all the
+     * information necessary to perform the record removal.
+     */
+    public void delete($entityName entity) throws LogicException {
+        try {
+            ${daoName}.getInstance().delete(entity);
+        } catch (DataException ex) {
+            throw new LogicException(ex);
+        }
+    }
+
+    /**
+     * This method updates a record within the $table.getName() table.
+     * @param entity An instance of the $entityName class that contains all the
+     * information necessary to update the desired record.
+     */
+    public void update($entityName entity) throws LogicException {
+        try {
+            ${daoName}.getInstance().update(entity);
+        } catch (DataException ex) {
+            throw new LogicException(ex);
+        }
+    }
+
+    /**
+     * This method returns an unique instance of the $entityName class, with
+     * its properties values filled with data returned from a record from 
+     * $table.getName() which satisfies the given primary key.
+     */
+    public $entityName findByPrimaryKey(#primaryKey($table)) throws LogicException {
+        $entityName entity = null;
+            
+        try {
+            entity = ${daoName}.getInstance().findByPrimaryKey(#primaryKeyParams($table));
+        } catch (DataException ex) {
+            throw new LogicException(ex);
+        }
+        
+        return entity;
+    }
+
+    /**
+     * This method performs a query for all the records of the $table.getName()
+     * table.
+     * @return A collection containing all the records of the $table.getName()
+     * table.
+     */
+    public Collection<$entityName> findAll() throws LogicException {
+        Collection<$entityName> result = Collections.EMPTY_LIST;
+        
+        try {
+            result = ${daoName}.getInstance().findAll();
+        } catch (DataException ex) {
+            throw new LogicException(ex);
+        }
+        
+        return result;
+    }
+
+    /**
+     * This method performs a database query based on the values contained at
+     * the example object. This object is used to build dynamically the SQL
+     * query string.
+     * @param example The example object.
+     * @param A collection containing the query result.
+     */
+    public Collection<$entityName> findByExample($entityName example) throws LogicException {
+        Collection<$entityName> result = Collections.EMPTY_LIST;
+        
+        try {
+            result = ${daoName}.getInstance().findByExample(example);
+        } catch (DataException ex) {
+            throw new LogicException(ex);
+        }
+        
+        return result;
+    }
+}

@@ -1,0 +1,93 @@
+## This is the template for creating the Swing main application frame class
+package $package;
+
+import com.jgoodies.forms.builder.PanelBuilder;
+import com.jgoodies.forms.factories.ButtonBarFactory;
+import com.jgoodies.forms.layout.CellConstraints;
+import com.jgoodies.forms.layout.FormLayout;
+import javax.swing.JButton;
+import javax.swing.JInternalFrame;
+import javax.swing.JPanel;
+import javax.swing.JSplitPane;
+import javax.swing.JTextField;
+import javax.swing.table.AbstractTableModel;
+import ${packageUtil}.Constants;
+import ${packageUtil}.MessageUtil;
+
+/**
+#if ($application.getDescription())
+ * $application.getDescription()
+ *
+#end
+ * This class implements the starting point of the application, implemented as a
+ * swing JFrame.
+ *
+#if ($application.getAuthor())
+ * @author $application.getAuthor()
+#end
+ */
+public class ${className} extends JInternalFrame {
+#foreach ($column in $table.getColumns())
+    private JTextField ${stringUtils.columnToPropertyName($column.getName())}Field;
+#end
+    
+    public ${className}() {
+#set($messageKey = "MANTAIN_TABLE_" + $table.getName())
+#if(!$application.containsMessage($messageKey))
+$application.addMessage($messageKey, ${table.getName()})
+#end
+        super(MessageUtil.getMessage(Constants.$messageKey), true, true, true, true);
+        
+        initComponents();
+        setupLayout();
+    }
+    
+    private void initComponents() {
+#foreach ($column in $table.getColumns())
+        ${stringUtils.columnToPropertyName($column.getName())}Field = new JTextField();
+#end
+    }
+    
+    private void setupLayout() {
+#set($rowInfo = "p")
+#foreach ($column in $table.getColumns())
+#set($rowInfo = "p,3dlu," + $rowInfo)
+#end
+        String columns = "p,3dlu,300px";
+        String rows = "$rowInfo";
+        
+        FormLayout layout = new FormLayout(columns, rows);
+        PanelBuilder builder = new PanelBuilder(layout);
+        CellConstraints cc = new CellConstraints();
+
+        builder.setDefaultDialogBorder();
+
+#set ($rowIndex = 1)
+#foreach ($column in $table.getColumns())
+        builder.addLabel("${stringUtils.columnToPropertyName($column.getName())}", cc.xy(1, $rowIndex));
+        builder.add(${stringUtils.columnToPropertyName($column.getName())}Field, cc.xy(3, $rowIndex));
+#set ($rowIndex = $rowIndex + 2)
+#end
+        
+        builder.add(ButtonBarFactory.buildCenteredBar(new JButton("Button")), cc.xyw(1, $rowIndex, 3));
+        
+        JPanel tablePanel = new JPanel();
+        JSplitPane mainPanel = new JSplitPane(JSplitPane.VERTICAL_SPLIT, builder.getPanel(), tablePanel);
+        
+        this.setContentPane(mainPanel);
+    }
+    
+    private static class MyTableModel extends AbstractTableModel {
+        public int getRowCount() {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        public int getColumnCount() {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        public Object getValueAt(int rowIndex, int columnIndex) {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+    }
+}

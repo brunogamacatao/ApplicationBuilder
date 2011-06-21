@@ -1,0 +1,34 @@
+## This is the template for the MessageUtil class
+package $package;
+
+import java.util.ResourceBundle;
+import java.text.MessageFormat;
+
+/**
+#if ($application.getDescription())
+ * $application.getDescription()
+ *
+#end
+ * This class implements utility methods to handle localized messages.
+ *
+#if ($application.getAuthor())
+ * @author $application.getAuthor()
+#end
+ */
+public class MessageUtil {
+    private static final String MESSAGES_FILE = "messages/Messages";
+    
+    private static ResourceBundle bundle = null;
+    
+    static {
+        bundle = ResourceBundle.getBundle(MESSAGES_FILE);
+    }
+    
+    public static String getMessage(String key) {
+        return bundle.getString(key);
+    }
+    
+    public static String getMessage(String key, Object... arguments) {
+        return MessageFormat.format(getMessage(key), arguments);
+    }
+}
